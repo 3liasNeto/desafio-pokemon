@@ -78,7 +78,7 @@ export function Home(p: Props) {
             <ModeIcon name="calendar" />
             <div>
               <h3>Desafio do dia</h3>
-              <span className="muted">{todayKey().split('-').reverse().join('/')} · igual para todo mundo</span>
+              <span className="muted">{todayKey().split('-').reverse().join('/')} · mesmas regras para todo mundo</span>
             </div>
           </div>
           <RuleList rules={describeRules(daily).slice(0, 4)} />

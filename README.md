@@ -4,7 +4,7 @@ Sorteie seus Pokémon um por vez, monte golpes, itens, natureza, IVs e EVs e enf
 treinadores sem perder nenhuma batalha. As batalhas rodam no simulador do Pokémon Showdown (`@pkmn/sim`),
 e a IA dos rivais calcula o dano real de cada golpe com a calculadora do Smogon (`@smogon/calc`).
 
-**Modos:** desafio do dia (mesmo sorteio para todos), desafio aleatório, Liga clássica, desafios criados
+**Modos:** desafio do dia (mesmas regras e treinadores para todos; cada um sorteia o próprio time), desafio aleatório, Liga clássica, desafios criados
 pelo jogador (compartilhados por link) e teambuilder com import/export no formato do Showdown.
 Batalhas individuais e em duplas, com Mega Evolução, Dynamax/Gigantamax e Terastalização.
 
@@ -54,6 +54,8 @@ valor novo.
 
 ## Como funciona
 
+- **Sorteio:** cada run tem a sua seed, então cada jogador recebe Pokémon e rivais diferentes. Desafios criados
+  podem ligar "mesmo sorteio para todos" para que todos joguem com a mesma sequência.
 - **Sem backend:** tudo roda no navegador. Runs, times e desafios criados ficam no `localStorage` do jogador;
   desafios e relatórios de run são compartilhados dentro do próprio link (`#desafio=` e `#run=`).
 - **Carregamento:** a página inicial baixa só o necessário (~2,5 MB). Os dados de golpes de cada Pokémon e o

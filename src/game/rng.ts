@@ -1,5 +1,5 @@
-// RNG determinístico: o mesmo seed gera o mesmo sorteio para todo mundo
-// (desafio diário e desafios compartilhados por link).
+// RNG determinístico: o mesmo seed gera sempre a mesma sequência. Usado nas regras do desafio diário
+// (iguais para todo mundo), no sorteio de cada run e em desafios com "mesmo sorteio para todos".
 
 export type Rng = () => number;
 

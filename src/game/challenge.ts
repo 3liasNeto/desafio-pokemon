@@ -44,7 +44,9 @@ export interface Challenge {
   tiers: string[]; // ids de TIER_GROUPS; vazio = todos
   rerolls: number;
   swaps: number;
-  seed: number; // mesmo seed = mesmo sorteio
+  seed: number; // regras e treinadores sorteados a partir dele
+  /** todos que jogam recebem o mesmo sorteio de Pokémon (senão cada run sorteia o seu) */
+  sameDraw?: boolean;
   trainers: TrainerDef[];
 }
 
@@ -125,7 +127,7 @@ export function classicChallenge(): Challenge {
   };
 }
 
-/** Desafio do dia: tudo vem do seed da data, então é igual para todo mundo. */
+/** Desafio do dia: regras e treinadores vêm do seed da data (iguais para todo mundo); o time é sorteado por run. */
 export function dailyChallenge(date = todayKey()): Challenge {
   const seed = hashString(`daily:${date}`);
   const rng = rngFor(seed, 'rules');
@@ -139,7 +141,7 @@ export function dailyChallenge(date = todayKey()): Challenge {
   const tiers = restriction > 0.8 ? ['OU', 'UU', 'RU'] : [];
   return {
     v: 1, kind: 'daily', name: `Desafio do dia · ${date.split('-').reverse().join('/')}`, author: '',
-    description: 'Mesmo sorteio para todo mundo hoje. Só a primeira tentativa vale.',
+    description: 'Mesmas regras e treinadores para todo mundo hoje; cada um sorteia o próprio time. Só a primeira tentativa vale.',
     format, teamMode: 'draft', mechanics, gens, tiers, rerolls: TEAM_REROLLS, swaps: SLOT_SWAPS, seed,
     trainers: eliteTrainers(rngFor(seed, 'trainers'), pick(rng, CHAMPIONS)),
   };
@@ -212,6 +214,9 @@ export function describeRules(c: Challenge): RuleLine[] {
     { icon: 'map', text: c.gens.length ? `Só Pokémon de: ${c.gens.map(g => GENS[g - 1].label).join(', ')}` : 'Pokémon de todas as gerações' },
     { icon: 'layers', text: c.tiers.length ? `Só tiers: ${c.tiers.join(', ')}` : 'Todos os tiers' },
     ...(c.teamMode !== 'own' ? [{ icon: 'reroll' as IconName, text: `${c.rerolls} rerolls · ${c.swaps} ${c.swaps === 1 ? 'troca' : 'trocas'}` }] : []),
+    ...(c.teamMode !== 'own'
+      ? [{ icon: 'dice' as IconName, text: c.sameDraw ? 'Mesmo sorteio de Pokémon para todos' : 'Cada jogador sorteia o próprio time' }]
+      : []),
     { icon: 'trophy', text: `${c.trainers.length} treinadores para vencer em sequência` },
   ];
 }
@@ -259,6 +264,7 @@ export function sanitizeChallenge(c: Challenge): Challenge {
     rerolls: int(c.rerolls, 0, 20, TEAM_REROLLS),
     swaps: int(c.swaps, 0, 10, SLOT_SWAPS),
     seed: int(c.seed, 0, 2 ** 31, randomSeed()),
+    sameDraw: !!c.sameDraw,
     trainers: c.trainers.slice(0, 10).map(t => ({
       name: str(t.name, 24) || 'Treinador',
       sprite: TRAINER_SPRITES.includes(t.sprite) ? t.sprite : 'acetrainer',

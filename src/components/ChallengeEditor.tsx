@@ -162,12 +162,28 @@ export function ChallengeEditor({ initial, onSave, onPlay, onBack }: Props) {
                 <label>Trocas com a reserva</label>
                 <input type="number" min={0} max={10} value={c.swaps} onChange={e => set({ swaps: clamp(e.target.value, 0, 10) })} />
               </div>
-              <div className="field">
-                <label>Sorteio</label>
-                <button className="btn" onClick={() => set({ seed: randomSeed() })} title="Todos que abrirem o link recebem a mesma sequência de Pokémon">
-                  <Icon name="dice" size={16} /> Gerar outro sorteio
+            </div>
+            <div className="field">
+              <label>Sorteio dos Pokémon</label>
+              <div className="choice-cards">
+                <button className={`choice-card ${!c.sameDraw ? 'on' : ''}`} onClick={() => set({ sameDraw: false })}>
+                  <b>
+                    <Icon name="dice" size={16} /> Cada um sorteia o seu
+                  </b>
+                  <span>Cada jogador (e cada tentativa) recebe Pokémon e rivais diferentes.</span>
+                </button>
+                <button className={`choice-card ${c.sameDraw ? 'on' : ''}`} onClick={() => set({ sameDraw: true })}>
+                  <b>
+                    <Icon name="users" size={16} /> Mesmo sorteio para todos
+                  </b>
+                  <span>Todos recebem a mesma sequência de Pokémon e os mesmos rivais — bom para comparar resultados.</span>
                 </button>
               </div>
+              {c.sameDraw && (
+                <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ seed: randomSeed() })}>
+                  <Icon name="dice" size={14} /> Gerar outra sequência
+                </button>
+              )}
             </div>
           </section>
 

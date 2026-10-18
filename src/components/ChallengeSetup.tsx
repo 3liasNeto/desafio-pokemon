@@ -207,7 +207,7 @@ export function ShareBox({ challenge }: { challenge: Challenge }) {
         </button>
       </div>
       <span className="muted" style={{ fontSize: 12 }}>
-        Quem abrir o link joga com as mesmas regras, treinadores e o mesmo sorteio.
+        Quem abrir o link joga com as mesmas regras e treinadores{challenge.sameDraw ? ' e o mesmo sorteio de Pokémon' : '; cada um sorteia o próprio time'}.
       </span>
     </div>
   );

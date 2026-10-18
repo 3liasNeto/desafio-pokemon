@@ -50,6 +50,7 @@ interface Run {
   practice: boolean; // desafio diário já jogado hoje: não conta
   dailyDate?: string;
   ownTeam?: string; // nome do time do teambuilder usado (sem sorteio)
+  seed?: number; // sorteio desta run (Pokémon, sets e rivais); runs antigas usam a seed do desafio
   history?: BattleRecord[]; // cada batalha jogada: treinador, time dele e o que aconteceu
 }
 
@@ -92,16 +93,21 @@ function loadRun(): Run | null {
   return run.phase === 'battle' ? { ...run, phase: 'hub' } : run;
 }
 
-function drawNext(c: Challenge, draws: number, exclude: string[]) {
-  return randomSpecies(rngFor(c.seed, 'draw', draws), speciesPool(c), { exclude });
+/** Seed do sorteio da run: própria de cada jogador, a não ser que o desafio peça o mesmo sorteio para todos. */
+const runSeed = (r: Pick<Run, 'seed' | 'challenge'>) => r.seed ?? r.challenge.seed;
+
+function drawNext(c: Challenge, seed: number, draws: number, exclude: string[]) {
+  return randomSpecies(rngFor(seed, 'draw', draws), speciesPool(c), { exclude });
 }
 
 function newRun(challenge: Challenge, practice = false): Run {
+  const seed = challenge.sameDraw ? challenge.seed : randomSeed();
   return {
     challenge,
+    seed,
     phase: 'draft',
     team: [],
-    candidate: drawNext(challenge, 0, []),
+    candidate: drawNext(challenge, seed, 0, []),
     reserve: [],
     builds: [],
     rerolls: challenge.rerolls,
@@ -208,13 +214,13 @@ export default function App() {
   const foeTeam = useMemo(() => {
     if (!run || !c || !c.trainers[run.wins]) return [];
     const t = c.trainers[run.wins];
-    return opponentTeam(rngFor(c.seed, 'foe', run.wins), {
+    return opponentTeam(rngFor(runSeed(run), 'foe', run.wins), {
       type: t.type, strength: t.strength, team: t.team, pool: speciesPool(c), mechanics: c.mechanics,
     });
     // novo time adversário a cada batalha iniciada
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run?.battleSeed]);
-  const battleSeed = useMemo(() => (run && c ? psSeed(rngFor(c.seed, 'battle', run.wins, run.battleSeed)) : ''), [run?.battleSeed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const battleSeed = useMemo(() => (run && c ? psSeed(rngFor(runSeed(run), 'battle', run.wins, run.battleSeed)) : ''), [run?.battleSeed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveTeam = (t: SavedTeam) => {
     setTeams(prev => {
@@ -246,7 +252,7 @@ export default function App() {
       if (!r.candidate) return {};
       const team = [...r.team, r.candidate];
       if (team.length >= TEAM_SIZE) return { team, candidate: null };
-      return { team, candidate: drawNext(r.challenge, r.draws, [...team, ...r.reserve]), draws: r.draws + 1 };
+      return { team, candidate: drawNext(r.challenge, runSeed(r), r.draws, [...team, ...r.reserve]), draws: r.draws + 1 };
     });
 
   const reroll = () =>
@@ -254,7 +260,7 @@ export default function App() {
       if (!r.candidate || r.rerolls <= 0) return {};
       return {
         reserve: [...r.reserve, r.candidate],
-        candidate: drawNext(r.challenge, r.draws, taken(r)),
+        candidate: drawNext(r.challenge, runSeed(r), r.draws, taken(r)),
         draws: r.draws + 1,
         rerolls: r.rerolls - 1,
       };
@@ -268,7 +274,7 @@ export default function App() {
       const team = r.team.map((s, i) => (i === teamIdx ? incoming : s));
       const reserve = r.reserve.map((s, i) => (i === reserveIdx ? outgoing : s));
       const builds = r.builds.length
-        ? r.builds.map((b, i) => (i === teamIdx ? defaultBuild(incoming, rngFor(r.challenge.seed, 'build', incoming)) : b))
+        ? r.builds.map((b, i) => (i === teamIdx ? defaultBuild(incoming, rngFor(runSeed(r), 'build', incoming)) : b))
         : r.builds;
       return { team, reserve, builds, swaps: r.swaps - 1 };
     });
@@ -416,7 +422,7 @@ export default function App() {
                 onKeep={keep}
                 onReroll={reroll}
                 onSwap={swap}
-                onConfirm={() => update(r => ({ phase: 'build', builds: r.team.map(s => defaultBuild(s, rngFor(r.challenge.seed, 'build', s))) }))}
+                onConfirm={() => update(r => ({ phase: 'build', builds: r.team.map(s => defaultBuild(s, rngFor(runSeed(r), 'build', s))) }))}
               />
             )}
 
