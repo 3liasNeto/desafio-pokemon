@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000" fill="none">
+  <defs>
+    <radialGradient id="gold"><stop stop-color="#ffcf53" stop-opacity=".09"/><stop offset="1" stop-color="#ffcf53" stop-opacity="0"/></radialGradient>
+    <radialGradient id="red"><stop stop-color="#f45243" stop-opacity=".08"/><stop offset="1" stop-color="#f45243" stop-opacity="0"/></radialGradient>
+    <radialGradient id="blue"><stop stop-color="#3b6cd6" stop-opacity=".12"/><stop offset="1" stop-color="#3b6cd6" stop-opacity="0"/></radialGradient>
+    <g id="ball" stroke="currentColor" stroke-width="2">
+      <circle r="138"/><circle r="125" stroke-dasharray="2 12" stroke-width="1"/>
+      <path d="M-138 0h104m68 0h104"/>
+      <circle r="34"/><circle r="19"/>
+    </g>
+    <g id="spark" stroke="currentColor" stroke-linecap="round"><path d="M-5 0H5M0-5V5"/></g>
+  </defs>
+  <ellipse cx="50" cy="240" rx="370" ry="390" fill="url(#blue)"/>
+  <ellipse cx="1390" cy="720" rx="390" ry="420" fill="url(#gold)"/>
+  <ellipse cx="1260" cy="110" rx="370" ry="290" fill="url(#red)"/>
+  <g color="#7fa6e8" opacity=".17" transform="translate(25 255) rotate(-28)"><use href="#ball"/></g>
+  <g color="#ffcf53" opacity=".14" transform="translate(1410 745) rotate(24) scale(1.6)"><use href="#ball"/></g>
+  <g stroke="#ffcf53" stroke-width="1" opacity=".09">
+    <ellipse cx="720" cy="1040" rx="680" ry="280"/>
+    <ellipse cx="720" cy="1040" rx="570" ry="215" stroke-dasharray="5 12"/>
+    <path d="M40 1040h1360M720 760v240"/>
+  </g>
+  <!-- Eletricidade, água e folha: referências aos tipos Pokémon. -->
+  <g stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+    <path d="m1308 240-23 37h20l-10 28 37-44h-23l12-21Z" stroke="#ffcf53" opacity=".18"/>
+    <path d="M91 672c0 0-19 25-19 36a19 19 0 0 0 38 0c0-11-19-36-19-36Z" stroke="#7fa6e8" opacity=".17"/>
+    <path d="M1317 473c-35-2-51 13-41 33 23 10 39-5 41-33Zm-42 35 28-23" stroke="#70dbc0" opacity=".13"/>
+  </g>
+  <g color="#ffcf53" opacity=".3">
+    <use href="#spark" x="139" y="91"/><use href="#spark" x="1341" y="433"/>
+    <use href="#spark" x="64" y="869"/><use href="#spark" x="1245" y="949"/>
+  </g>
+  <g fill="#8ca9da" opacity=".25">
+    <circle cx="69" cy="478" r="2"/><circle cx="1360" cy="133" r="2"/>
+    <circle cx="157" cy="812" r="1.5"/><circle cx="1278" cy="586" r="2"/>
+    <circle cx="310" cy="39" r="1.5"/><circle cx="1160" cy="883" r="1.5"/>
+  </g>
+</svg>
