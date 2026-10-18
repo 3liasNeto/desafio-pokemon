@@ -7,6 +7,38 @@ import { IV_MAX, LEVEL, MAX_PERFECT_IVS, STATS, type Build, type StatId, type St
 
 export const dex = Dex.forGen(9);
 
+type SpeciesData = ReturnType<typeof dex.species.get>;
+
+/**
+ * Espécie que dá para usar no jogo: as de Scarlet/Violet e as das gerações anteriores (National Dex),
+ * sem formas que só existem em batalha (Mega, Gigantamax), cosméticas, Totem ou de outros jogos.
+ */
+export function isPlayable(sp: SpeciesData) {
+  return (
+    sp.exists && sp.num > 0 && (!sp.isNonstandard || sp.isNonstandard === 'Past') && !sp.battleOnly &&
+    !sp.isCosmeticForme && sp.forme !== 'Gmax' && !sp.name.endsWith('-Totem')
+  );
+}
+
+/** Tier usado nos filtros: o da Gen 9 ou, para quem não está em Scarlet/Violet, o da National Dex. */
+export function effectiveTier(sp: SpeciesData): string {
+  const natDex = (sp as unknown as { natDexTier?: string }).natDexTier;
+  return sp.tier && sp.tier !== 'Illegal' ? sp.tier : natDex || 'Illegal';
+}
+
+/**
+ * Força da espécie no formato de nível do Random Battle (menor = mais forte). Quem não tem set lá
+ * ganha uma estimativa pelo total de stats e pelo tier.
+ */
+function powerLevel(id: string): number {
+  const lv = generator?.randomSets?.[id]?.level as number | undefined;
+  if (lv) return lv;
+  const sp = dex.species.get(id);
+  const bst = Object.values(sp.baseStats).reduce((a, n) => a + n, 0);
+  const tierBonus: Record<string, number> = { AG: -10, Uber: -7, OU: -4, UUBL: -3, UU: -1 };
+  return Math.max(64, Math.min(100, Math.round(100 - (bst - 350) * 0.1) + (tierBonus[effectiveTier(sp)] ?? 0)));
+}
+
 // O gerador do Random Battle também serve como "pool" balanceado de espécies
 // e como fonte de sets prontos para os adversários. Ele e as learnsets do simulador são pesados
 // e não são usados na tela inicial, então carregam depois dela (loadGameData).
@@ -25,7 +57,13 @@ export function loadGameData(): Promise<void> {
     await fillLearnsets();
     const { TeamGenerators } = await import('@pkmn/randoms');
     const gen = TeamGenerators.getTeamGenerator('gen9randombattle');
-    POOL = Object.keys((gen as unknown as { randomSets: object }).randomSets).filter(id => dex.species.get(id).exists);
+    // Random Battle da Gen 9 + todas as evoluções finais que não estão em Scarlet/Violet (National Dex)
+    const randbats = Object.keys((gen as unknown as { randomSets: object }).randomSets).filter(id => dex.species.get(id).exists);
+    const others = dex.species
+      .all()
+      .filter(sp => isPlayable(sp) && !sp.nfe && !['LC', 'NFE', 'Illegal'].includes(effectiveTier(sp)))
+      .map(sp => sp.id);
+    POOL = [...new Set([...randbats, ...others])];
     generator = gen;
   })();
   return loading;
@@ -107,7 +145,7 @@ export function speciesPool(filter: PoolFilter): string[] {
   const list = POOL.filter(id => {
     const sp = dex.species.get(id);
     if (filter.gens.length && !filter.gens.includes(sp.gen)) return false;
-    if (tiers.size && !tiers.has(sp.tier)) return false;
+    if (tiers.size && !tiers.has(effectiveTier(sp))) return false;
     return true;
   });
   poolCache.set(key, list);
@@ -134,7 +172,7 @@ export function randomSpecies(rng: Rng, pool: string[], opts: DrawOptions = {}):
   if (opts.strength) {
     const [lo, hi] = STRENGTH_LEVELS[Math.max(0, Math.min(4, opts.strength - 1))];
     const inRange = typed.filter(id => {
-      const lv = generator.randomSets[id].level as number;
+      const lv = powerLevel(id);
       return lv >= lo && lv <= hi;
     });
     if (inRange.length >= 8) candidates = inRange;
@@ -163,7 +201,7 @@ function seedGenerator(rng?: Rng) {
 export function defaultBuild(speciesName: string, rng?: Rng): Build {
   const species = dex.species.get(speciesName);
   seedGenerator(rng);
-  // espécies fora do Random Battle (filhotes, formas raras...) ganham um set simples: os golpes mais fortes com STAB
+  // espécies fora do Random Battle (as que não estão em Scarlet/Violet, filhotes...) ganham um set montado por heurística
   const set = generator?.randomSets[species.id] ? generator.randomSet(species.name, {}, false, false) : basicSet(species.name);
   const b = species.baseStats;
   const physical = b.atk >= b.spa;
@@ -195,26 +233,89 @@ export function defaultBuild(speciesName: string, rng?: Rng): Build {
   };
 }
 
+const SETUP_PHYSICAL = ['swordsdance', 'dragondance', 'bulkup', 'shiftgear', 'coil', 'shellsmash', 'victorydance'];
+const SETUP_SPECIAL = ['nastyplot', 'calmmind', 'quiverdance', 'shellsmash', 'tailglow', 'geomancy'];
+const RECOVERY = ['recover', 'roost', 'softboiled', 'slackoff', 'synthesis', 'moonlight', 'morningsun', 'milkdrink', 'shoreup', 'strengthsap', 'wish'];
+const UTILITY = ['stealthrock', 'spikes', 'willowisp', 'toxic', 'thunderwave', 'leechseed', 'defog', 'rapidspin', 'taunt', 'protect'];
+const GOOD_ABILITIES = [
+  'Huge Power', 'Pure Power', 'Power Construct', 'No Guard', 'Speed Boost', 'Adaptability', 'Magic Guard', 'Regenerator', 'Multiscale', 'Drought', 'Drizzle',
+  'Sand Stream', 'Snow Warning', 'Protean', 'Libero', 'Tough Claws', 'Sheer Force', 'Technician', 'Scrappy', 'Intimidate', 'Moxie',
+  'Guts', 'Unaware', 'Poison Heal', 'Prankster', 'Magic Bounce', 'Serene Grace', 'Skill Link', 'Tinted Lens', 'Levitate', 'Thick Fat',
+  'Iron Fist', 'Strong Jaw', 'Mold Breaker', 'Swift Swim', 'Chlorophyll', 'Natural Cure', 'Flash Fire', 'Water Absorb', 'Volt Absorb',
+  'Storm Drain', 'Lightning Rod', 'Sap Sipper', 'Filter', 'Solid Rock', 'Sturdy',
+];
+const BAD_ATTACKS = new Set(['focuspunch', 'futuresight', 'doomdesire', 'dreameater', 'lastresort', 'synchronoise', 'belch', 'skyattack', 'solarblade', 'solarbeam', 'razorwind', 'skullbash', 'meteorbeam', 'electroshot', 'hyperbeam', 'gigaimpact', 'blastburn', 'frenzyplant', 'hydrocannon', 'rockwrecker', 'roaroftime', 'prismaticlaser', 'eternabeam', 'explosion', 'selfdestruct', 'mistyexplosion', 'finalgambit', 'memento', 'fling', 'naturalgift', 'spitup', 'trumpcard', 'snore', 'round', 'echoedvoice', 'fakeout', 'firstimpression', 'suckerpunch', 'counter', 'mirrorcoat', 'metalburst', 'bide', 'endeavor', 'superfang', 'naturesmadness', 'ruination', 'dragonrage', 'sonicboom', 'seismictoss', 'nightshade', 'psywave', 'steelroller', 'shelltrap', 'burnup', 'doubleshock', 'beakblast', 'hyperspacehole']);
+
+/**
+ * Set competitivo montado por heurística, para espécies sem set no Random Battle da Gen 9
+ * (as que não estão em Scarlet/Violet e outras raras): golpes com STAB, cobertura de tipos,
+ * um golpe de setup/recuperação/utilidade conforme o perfil e um item que combina.
+ */
 function basicSet(speciesName: string) {
   const sp = dex.species.get(speciesName);
-  const physical = sp.baseStats.atk >= sp.baseStats.spa;
-  const damaging = learnableMoves(speciesName)
-    .filter(m => m.category !== 'Status' && m.basePower > 0 && !m.selfdestruct && !m.flags.charge && !m.self?.volatileStatus)
+  const b = sp.baseStats;
+  const physical = b.atk >= b.spa;
+  const pool = learnableMoves(speciesName);
+  const has = new Set<string>(pool.map(m => m.id));
+  const attacks = pool
+    .filter(m => m.category !== 'Status' && !BAD_ATTACKS.has(m.id) && !m.flags.charge && !m.self?.volatileStatus)
+    .filter(m => (m.basePower >= 50 || m.multihit) && (m.accuracy === true || m.accuracy >= 70))
     .map(m => {
       const fits = (m.category === 'Physical') === physical;
-      const score = m.basePower * (sp.types.includes(m.type) ? 1.5 : 1) * (fits ? 1 : 0.6) * (m.accuracy === true ? 1 : m.accuracy / 100);
+      const hits = Array.isArray(m.multihit) ? 3 : m.multihit ?? 1;
+      const acc = m.accuracy === true ? 1 : m.accuracy / 100;
+      const recoil = m.recoil || m.mindBlownRecoil ? 0.9 : 1;
+      const score = m.basePower * hits * (sp.types.includes(m.type) ? 1.5 : 1) * (fits ? 1 : 0.55) * acc * recoil;
       return { m, score };
     })
-    .sort((a, b) => b.score - a.score);
+    .sort((x, y) => y.score - x.score);
+
+  const bulky = b.hp + b.def + b.spd >= 300 && Math.max(b.atk, b.spa) < 110;
+  const setupList = physical ? SETUP_PHYSICAL : SETUP_SPECIAL;
+  const utility =
+    (bulky ? RECOVERY.find(m => has.has(m)) ?? UTILITY.find(m => has.has(m)) : setupList.find(m => has.has(m))) ??
+    (bulky ? undefined : RECOVERY.find(m => has.has(m)));
+
+  // ataques: STAB principal, STAB do segundo tipo e cobertura de tipos novos
   const moves: string[] = [];
   const types = new Set<string>();
-  for (const { m } of damaging) {
-    if (moves.length >= 4) break;
-    if (types.has(m.type) && damaging.length > 6) continue; // variedade de tipos
-    moves.push(m.id);
-    types.add(m.type);
+  const want = utility ? 3 : 4;
+  for (const t of sp.types) {
+    const best = attacks.find(a => a.m.type === t);
+    if (best && moves.length < want && (!moves.length || best.score >= attacks[0].score * 0.45)) {
+      moves.push(best.m.id);
+      types.add(t);
+    }
   }
-  return { moves, ability: sp.abilities[0], item: '', teraType: sp.types[0] };
+  for (const a of attacks) {
+    if (moves.length >= want) break;
+    if (!types.has(a.m.type) && !moves.includes(a.m.id)) {
+      moves.push(a.m.id);
+      types.add(a.m.type);
+    }
+  }
+  for (const a of attacks) {
+    if (moves.length >= want) break;
+    if (!moves.includes(a.m.id)) moves.push(a.m.id);
+  }
+  if (utility && moves.length < 4) moves.push(utility);
+
+  const setup = moves.some(m => SETUP_PHYSICAL.includes(m) || SETUP_SPECIAL.includes(m));
+  const recovery = moves.some(m => RECOVERY.includes(m));
+  const item = sp.nfe
+    ? 'Eviolite'
+    : setup
+      ? 'Life Orb'
+      : recovery || bulky
+        ? 'Leftovers'
+        : b.spe >= 80 && b.spe <= 115
+          ? 'Choice Scarf'
+          : physical
+            ? 'Choice Band'
+            : 'Choice Specs';
+  const abilities = Object.values(sp.abilities as unknown as Record<string, string>).filter(Boolean);
+  const ability = GOOD_ABILITIES.find(a => abilities.includes(a)) ?? abilities[0];
+  return { moves, ability, item, teraType: sp.types[0] };
 }
 
 export function buildToSet(b: Build): PokemonSet {
@@ -291,9 +392,7 @@ export function opponentTeam(rng: Rng, o: OpponentOptions): PokemonSet[] {
   seedGenerator(rng);
   return names.map(name => {
     const sp = dex.species.get(name);
-    const set = (generator.randomSets[sp.id]
-      ? generator.randomSet(name, {}, false, false)
-      : { species: name, moves: learnableMoves(name).slice(-4).map(m => m.id), ability: sp.abilities[0], item: 'Leftovers' }) as PokemonSet;
+    const set = (generator.randomSets[sp.id] ? generator.randomSet(name, {}, false, false) : { species: name, ...basicSet(name) }) as PokemonSet;
     const ivs: StatTable = { ...statTable(o.strength >= 5 ? 31 : 20 + o.strength), ...(set.ivs || {}) };
     if (o.strength < 5) {
       const main: StatId = sp.baseStats.atk >= sp.baseStats.spa ? 'atk' : 'spa';
@@ -328,9 +427,10 @@ export function learnableMoves(speciesName: string) {
   const sp = dex.species.get(speciesName);
   const cached = movePoolCache.get(sp.id);
   if (cached) return cached;
-  const list = [...dex.species.getMovePool(sp.id)]
+  // golpes de todas as gerações (National Dex): espécies fora de Scarlet/Violet não têm golpes "da Gen 9"
+  const list = [...dex.species.getMovePool(sp.id, true)]
     .map(id => dex.moves.get(id))
-    .filter(m => m.exists && !m.isNonstandard && !m.isZ && !m.isMax)
+    .filter(m => m.exists && (!m.isNonstandard || m.isNonstandard === 'Past') && !m.isZ && !m.isMax)
     .sort((a, b) => a.name.localeCompare(b.name));
   movePoolCache.set(sp.id, list);
   return list;
@@ -343,7 +443,7 @@ export function allItems(withMegaStones = false) {
   if (!list) {
     list = dex.items
       .all()
-      .filter(i => i.exists && !i.isPokeball && !i.zMove && (i.megaStone ? withMegaStones : !i.isNonstandard))
+      .filter(i => i.exists && !i.isPokeball && !i.zMove && (i.megaStone ? withMegaStones : !i.isNonstandard || i.isNonstandard === 'Past'))
       .sort((a, b) => a.name.localeCompare(b.name));
     itemsCache.set(withMegaStones, list);
   }

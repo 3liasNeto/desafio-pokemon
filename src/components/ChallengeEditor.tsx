@@ -3,7 +3,7 @@ import {
   ALL_TYPES, describeRules, GENS, MECHANIC_INFO, TEAM_MODE_INFO, TIER_GROUPS, TRAINER_SPRITES, type TeamMode,
   type Challenge, type Mechanics, type TrainerDef,
 } from '../game/challenge';
-import { dex, speciesPool, TYPE_COLORS, TYPE_PT } from '../game/data';
+import { dex, effectiveTier, speciesPool, TYPE_COLORS, TYPE_PT } from '../game/data';
 import { randomSeed } from '../game/rng';
 import { Combobox, RuleList, Sprite, TrainerAvatar, TypeIcon, type ComboOption } from './common';
 import { Icon } from './icons';
@@ -270,7 +270,7 @@ function TrainerEditor({
           id: sp.name,
           label: sp.name,
           icon: <span className="slot-types">{sp.types.map(ty => <TypeIcon key={ty} type={ty} size={16} />)}</span>,
-          desc: `${sp.types.map(ty => TYPE_PT[ty]).join('/')} · tier ${sp.tier} · Gen ${sp.gen}`,
+          desc: `${sp.types.map(ty => TYPE_PT[ty]).join('/')} · tier ${effectiveTier(sp)} · Gen ${sp.gen}`,
           disabled: t.team.includes(sp.name),
         })),
     [pool, t.type, t.team],

@@ -6,7 +6,8 @@ e a IA dos rivais calcula o dano real de cada golpe com a calculadora do Smogon 
 
 **Modos:** desafio do dia (mesmas regras e treinadores para todos; cada um sorteia o próprio time), desafio aleatório, Liga clássica, desafios criados
 pelo jogador (compartilhados por link) e teambuilder com import/export no formato do Showdown.
-Batalhas individuais e em duplas, com Mega Evolução, Dynamax/Gigantamax e Terastalização.
+Pokémon de todas as gerações (National Dex), em batalhas individuais e em duplas, com Mega Evolução,
+Dynamax/Gigantamax e Terastalização.
 
 ## Rodando localmente
 

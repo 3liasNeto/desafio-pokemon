@@ -1,7 +1,7 @@
 import { Teams, toID } from '@pkmn/sim';
 import type { PokemonSet } from '@pkmn/sim';
 import { GENS, TIER_GROUPS, type Challenge } from './challenge';
-import { buildToSet, defaultBuild, dex } from './data';
+import { buildToSet, defaultBuild, dex, effectiveTier, isPlayable } from './data';
 import {
   IV_MAX, MAX_PERFECT_IVS, perfectIvCount, STATS, TEAM_SIZE, validateTeam, type Build, type StatId, type StatTable,
 } from './rules';
@@ -38,12 +38,14 @@ export function newTeam(): SavedTeam {
 // ---------- espécies disponíveis no teambuilder ----------
 
 let speciesCache: string[] | null = null;
-/** Todas as espécies jogáveis na Gen 9 (sem formas que só existem em batalha, como Mega e Gigantamax). */
+/**
+ * Todas as espécies jogáveis, de todas as gerações (National Dex): sem formas que só existem em batalha
+ * (Mega, Gigantamax) nem formas só cosméticas (Vivillon, Alcremie, Minior...), idênticas à base na batalha.
+ */
 export function buildableSpecies(): string[] {
   speciesCache ??= dex.species
     .all()
-    // sem formas só cosméticas (Vivillon, Alcremie, Minior...): na batalha são idênticas à base
-    .filter(s => s.exists && !s.isNonstandard && !s.battleOnly && s.tier !== 'Illegal' && !s.name.endsWith('-Totem') && !s.isCosmeticForme)
+    .filter(s => isPlayable(s) && effectiveTier(s) !== 'Illegal')
     .map(s => s.name)
     .sort((a, b) => a.localeCompare(b));
   return speciesCache;
@@ -55,7 +57,7 @@ const TIER_OF_GROUP: Record<string, string[]> = Object.fromEntries(TIER_GROUPS.m
 export function speciesAllowed(c: Pick<Challenge, 'gens' | 'tiers'>, species: string) {
   const sp = dex.species.get(species);
   if (c.gens.length && !c.gens.includes(sp.gen)) return false;
-  if (c.tiers.length && !c.tiers.some(t => TIER_OF_GROUP[t]?.includes(sp.tier))) return false;
+  if (c.tiers.length && !c.tiers.some(t => TIER_OF_GROUP[t]?.includes(effectiveTier(sp)))) return false;
   return true;
 }
 
@@ -72,7 +74,7 @@ export function formatBlocks(format: TeamFormat | undefined, species: string): s
   if (format.gen && sp.gen !== format.gen) return `não é da Gen ${format.gen}`;
   if (format.tier) {
     const limit = TIER_GROUPS.findIndex(g => g.id === format.tier);
-    if (tierRank(sp.tier) < limit) return `tier ${sp.tier} acima de ${format.tier}`;
+    if (tierRank(effectiveTier(sp)) < limit) return `tier ${effectiveTier(sp)} acima de ${format.tier}`;
   }
   return null;
 }

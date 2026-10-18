@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Mechanics } from '../game/challenge';
 import {
-  allItems, allNatures, calcStats, canGigantamax, defaultBuild, dex, fixedGender, learnableMoves, megaStonesFor, natureDesc,
+  allItems, allNatures, calcStats, canGigantamax, defaultBuild, dex, effectiveTier, fixedGender, learnableMoves, megaStonesFor, natureDesc,
   speciesAbilities, TERA_TYPES, TYPE_COLORS, TYPE_PT,
 } from '../game/data';
 import { buildableSpecies } from '../game/teams';
@@ -147,8 +147,8 @@ function useSpeciesOptions(builds: Build[] | null, filter?: (species: string) =>
           label: sp.name,
           icon: <MiniSprite species={sp.name} />,
           meta: <span className="slot-types">{sp.types.map(t => <TypeIcon key={t} type={t} size={16} />)}</span>,
-          desc: `${sp.types.map(t => TYPE_PT[t]).join('/')} · tier ${sp.tier} · Gen ${sp.gen} · BST ${Object.values(sp.baseStats).reduce((a, b) => a + b, 0)}`,
-          search: `${sp.types.join(' ')} ${sp.types.map(t => TYPE_PT[t]).join(' ')} ${sp.tier} gen${sp.gen}`,
+          desc: `${sp.types.map(t => TYPE_PT[t]).join('/')} · tier ${effectiveTier(sp)} · Gen ${sp.gen} · BST ${Object.values(sp.baseStats).reduce((a, b) => a + b, 0)}`,
+          search: `${sp.types.join(' ')} ${sp.types.map(t => TYPE_PT[t]).join(' ')} ${effectiveTier(sp)} gen${sp.gen}`,
           base: sp.baseSpecies,
         };
       }),
